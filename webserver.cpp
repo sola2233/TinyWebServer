@@ -2,10 +2,10 @@
 
 WebServer::WebServer()
 {
-    //http_conn类对象
+    // http_conn类对象
     users = new http_conn[MAX_FD];
 
-    //root文件夹路径
+    // root文件夹路径
     char server_path[200];
     getcwd(server_path, 200);
     char root[6] = "/root";
@@ -13,7 +13,7 @@ WebServer::WebServer()
     strcpy(m_root, server_path);
     strcat(m_root, root);
 
-    //定时器
+    // 定时器
     users_timer = new client_data[MAX_FD];
 }
 
@@ -46,25 +46,25 @@ void WebServer::init(int port, string user, string passWord, string databaseName
 
 void WebServer::trig_mode()
 {
-    //LT + LT
+    // LT + LT
     if (0 == m_TRIGMode)
     {
         m_LISTENTrigmode = 0;
         m_CONNTrigmode = 0;
     }
-    //LT + ET
+    // LT + ET
     else if (1 == m_TRIGMode)
     {
         m_LISTENTrigmode = 0;
         m_CONNTrigmode = 1;
     }
-    //ET + LT
+    // ET + LT
     else if (2 == m_TRIGMode)
     {
         m_LISTENTrigmode = 1;
         m_CONNTrigmode = 0;
     }
-    //ET + ET
+    // ET + ET
     else if (3 == m_TRIGMode)
     {
         m_LISTENTrigmode = 1;
@@ -76,7 +76,7 @@ void WebServer::log_write()
 {
     if (0 == m_close_log)
     {
-        //初始化日志
+        // 初始化日志
         if (1 == m_log_write)
             Log::get_instance()->init("./ServerLog", m_close_log, 2000, 800000, 800);
         else
@@ -86,27 +86,27 @@ void WebServer::log_write()
 
 void WebServer::sql_pool()
 {
-    //初始化数据库连接池
+    // 初始化数据库连接池
     m_connPool = connection_pool::GetInstance();
     m_connPool->init("localhost", m_user, m_passWord, m_databaseName, 3306, m_sql_num, m_close_log);
 
-    //初始化数据库读取表
+    // 初始化数据库读取表
     users->initmysql_result(m_connPool);
 }
 
 void WebServer::thread_pool()
 {
-    //线程池
+    // 线程池
     m_pool = new threadpool<http_conn>(m_actormodel, m_connPool, m_thread_num);
 }
 
 void WebServer::eventListen()
 {
-    //网络编程基础步骤
+    // 网络编程基础步骤
     m_listenfd = socket(PF_INET, SOCK_STREAM, 0);
     assert(m_listenfd >= 0);
 
-    //优雅关闭连接
+    // 优雅关闭连接
     if (0 == m_OPT_LINGER)
     {
         struct linger tmp = {0, 1};
@@ -119,6 +119,7 @@ void WebServer::eventListen()
     }
 
     int ret = 0;
+    // 服务器绑定地址
     struct sockaddr_in address;
     bzero(&address, sizeof(address));
     address.sin_family = AF_INET;
@@ -126,7 +127,9 @@ void WebServer::eventListen()
     address.sin_port = htons(m_port);
 
     int flag = 1;
+    // 设置端口复用
     setsockopt(m_listenfd, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag));
+    // 绑定
     ret = bind(m_listenfd, (struct sockaddr *)&address, sizeof(address));
     assert(ret >= 0);
     ret = listen(m_listenfd, 5);
@@ -134,7 +137,7 @@ void WebServer::eventListen()
 
     utils.init(TIMESLOT);
 
-    //epoll创建内核事件表
+    // 创建 epoll 对象，事件数组，即 epoll 创建内核事件表
     epoll_event events[MAX_EVENT_NUMBER];
     m_epollfd = epoll_create(5);
     assert(m_epollfd != -1);

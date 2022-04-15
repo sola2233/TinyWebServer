@@ -30,8 +30,10 @@ class http_conn
 {
 public:
     static const int FILENAME_LEN = 200;
-    static const int READ_BUFFER_SIZE = 2048;
-    static const int WRITE_BUFFER_SIZE = 1024;
+    static const int READ_BUFFER_SIZE = 2048;   // 读缓冲区的大小
+    static const int WRITE_BUFFER_SIZE = 1024;  // 写缓冲区的大小
+
+    // HTTP 请求的方法
     enum METHOD
     {
         GET = 0,
@@ -44,28 +46,34 @@ public:
         CONNECT,
         PATH
     };
+
+    // 解析客户端请求时，主状态机的状态
     enum CHECK_STATE
     {
-        CHECK_STATE_REQUESTLINE = 0,
-        CHECK_STATE_HEADER,
-        CHECK_STATE_CONTENT
+        CHECK_STATE_REQUESTLINE = 0,    // 正在分析请求行
+        CHECK_STATE_HEADER,             // 正在分析头部字段
+        CHECK_STATE_CONTENT             // 正在解析请求体
     };
+
+    // 服务器处理 HTTP 请求的可能结果，报文解析的结果
     enum HTTP_CODE
     {
-        NO_REQUEST,
-        GET_REQUEST,
-        BAD_REQUEST,
-        NO_RESOURCE,
-        FORBIDDEN_REQUEST,
-        FILE_REQUEST,
-        INTERNAL_ERROR,
-        CLOSED_CONNECTION
+        NO_REQUEST,         // 请求不完整，需要继续读取客户数据
+        GET_REQUEST,        // 获得了一个完成的客户请求
+        BAD_REQUEST,        // 客户请求语法错误
+        NO_RESOURCE,        // 服务器没有资源
+        FORBIDDEN_REQUEST,  // 客户对资源没有足够的访问权限
+        FILE_REQUEST,       // 文件请求，获取文件成功
+        INTERNAL_ERROR,     // 服务器内部错误
+        CLOSED_CONNECTION   // 客户端已经关闭连接了
     };
+
+    // 从状态机的三种可能状态，即行的读取状态
     enum LINE_STATUS
     {
-        LINE_OK = 0,
-        LINE_BAD,
-        LINE_OPEN
+        LINE_OK = 0,    // 读取到一个完整的行
+        LINE_BAD,       // 行出错
+        LINE_OPEN       // 行数据尚且不完整
     };
 
 public:
@@ -91,9 +99,9 @@ private:
     void init();
     HTTP_CODE process_read();
     bool process_write(HTTP_CODE ret);
-    HTTP_CODE parse_request_line(char *text);
-    HTTP_CODE parse_headers(char *text);
-    HTTP_CODE parse_content(char *text);
+    HTTP_CODE parse_request_line(char *text);   // 解析请求行首行
+    HTTP_CODE parse_headers(char *text);        // 解析头部
+    HTTP_CODE parse_content(char *text);        // 解析请求体
     HTTP_CODE do_request();
     char *get_line() { return m_read_buf + m_start_line; };
     LINE_STATUS parse_line();
@@ -116,20 +124,23 @@ public:
 private:
     int m_sockfd;
     sockaddr_in m_address;
-    char m_read_buf[READ_BUFFER_SIZE];
-    int m_read_idx;
-    int m_checked_idx;
-    int m_start_line;
-    char m_write_buf[WRITE_BUFFER_SIZE];
+    char m_read_buf[READ_BUFFER_SIZE];  // 读缓冲的数组
+    int m_read_idx;                     // 标示读缓冲区中已经读入的客户端数据的
+                                        // 最后一个字节的下一个位置
+    int m_checked_idx;                  // 当前正在分析的字符在读缓冲区的位置
+    int m_start_line;                   // 当前正在解析的行的起始位置
+    char m_write_buf[WRITE_BUFFER_SIZE];// 写缓冲的数组
     int m_write_idx;
-    CHECK_STATE m_check_state;
-    METHOD m_method;
+    CHECK_STATE m_check_state;          // 主状态机当前所处的状态
     char m_real_file[FILENAME_LEN];
-    char *m_url;
-    char *m_version;
-    char *m_host;
+    // 请求行字段
+    METHOD m_method;                    // 请求方法
+    char *m_url;                        // 请求目标的文件名
+    char *m_version;                    // 协议版本，只支持 HTTP1.1
+    // 首部字段
+    char *m_host;                       // 主机名
+    bool m_linger;                      // HTTP 请求是否要保持连接
     int m_content_length;
-    bool m_linger;
     char *m_file_address;
     struct stat m_file_stat;
     struct iovec m_iv[2];
